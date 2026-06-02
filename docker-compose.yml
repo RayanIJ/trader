@@ -1,0 +1,51 @@
+services:
+  ib-gateway:
+    image: ghcr.io/gnzsnz/ib-gateway:latest
+    container_name: ib-gateway
+    restart: always
+    ports:
+      - "4002:4002"  # Paper Trading Port
+      - "4001:4001"  # Live Trading Port
+      - "5900:5900"  # VNC for 2FA
+    environment:
+      - TWS_USERID=${TWS_USERID}
+      - TWS_PASSWORD=${TWS_PASSWORD}
+      - TRADING_MODE=${TRADING_MODE:-live}
+      - TWS_API_PORT=4001
+      - VNC_SERVER_PASSWORD=${VNC_PASSWORD:-123456}
+    # Note: Using a minimal config. We assume the image handles basic initialization.
+    # We might need to mount a config.ini if default isn't sufficient.
+
+  trader:
+    build: .
+    container_name: ib-ai-trader
+    depends_on:
+      - ib-gateway
+    network_mode: service:ib-gateway
+    environment:
+      - IB_HOST=127.0.0.1   # Localhost via service network
+      - IB_PORT=4001        # Live port
+
+      - DRY_RUN=${DRY_RUN:-true}
+      - USE_MOCK_AI=${USE_MOCK_AI:-false}
+      - TRADING_INTERVAL_SECONDS=${TRADING_INTERVAL_SECONDS:-300}
+      - TZ=Etc/GMT-3        # GMT+3
+    volumes:
+      - ./trader.log:/app/trader.log
+      - ./.env:/app/.env
+      - ./src:/app/src
+      - ./trades:/app/trades
+
+  dashboard:
+    build: .
+    container_name: ib-ai-dashboard
+    command: streamlit run src/ui/dashboard.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - PROJECT_ROOT=/app
+      - TZ=Etc/GMT-3        # GMT+3
+    volumes:
+      - ./.env:/app/.env
+      - ./trader.log:/app/trader.log
+      - ./trades:/app/trades
