@@ -24,3 +24,10 @@ log/
 
 # macOS
 .DS_Store
+
+# Trading cockpit (new app)
+data/
+backend/.venv/
+frontend/node_modules/
+frontend/.next/
+frontend/out/

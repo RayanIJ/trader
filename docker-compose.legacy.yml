@@ -1,0 +1,60 @@
+# Legacy Streamlit AI scalper stack (pre-cockpit). Not used by the browser cockpit.
+# Run with: docker compose -f docker-compose.legacy.yml up -d
+services:
+  ib-gateway:
+    image: ghcr.io/gnzsnz/ib-gateway:latest
+    container_name: ib-gateway-legacy
+    restart: always
+    ports:
+      - "4002:4002"
+      - "4001:4001"
+      - "4004:4004"
+      - "4003:4003"
+      - "5900:5900"
+    environment:
+      - TWS_USERID=${TWS_USERID}
+      - TWS_PASSWORD=${TWS_PASSWORD}
+      - TRADING_MODE=${TRADING_MODE:-live}
+      - TWS_API_PORT=4001
+      - VNC_SERVER_PASSWORD=${VNC_PASSWORD:-123456}
+      - EXISTING_SESSION_DETECTED_ACTION=primary
+      - TWOFA_TIMEOUT_ACTION=restart
+      - AUTO_RESTART_TIME=11:59 PM
+      - TIME_ZONE=Etc/UTC
+
+  trader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ib-ai-trader
+    depends_on:
+      - ib-gateway
+    network_mode: service:ib-gateway
+    environment:
+      - IB_HOST=127.0.0.1
+      - IB_PORT=4001
+      - DRY_RUN=${DRY_RUN:-true}
+      - USE_MOCK_AI=${USE_MOCK_AI:-false}
+      - TRADING_INTERVAL_SECONDS=${TRADING_INTERVAL_SECONDS:-300}
+      - TZ=Etc/GMT-3
+    volumes:
+      - ./trader.log:/app/trader.log
+      - ./.env:/app/.env
+      - ./src:/app/src
+      - ./trades:/app/trades
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ib-ai-dashboard
+    command: streamlit run src/ui/dashboard.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - PROJECT_ROOT=/app
+      - TZ=Etc/GMT-3
+    volumes:
+      - ./.env:/app/.env
+      - ./trader.log:/app/trader.log
+      - ./trades:/app/trades

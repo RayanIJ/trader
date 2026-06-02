@@ -1,0 +1,127 @@
+# =============================================================================
+# Automated Options Trading Cockpit — user configuration
+# =============================================================================
+# Every threshold below is validated against app/config/schema.py on load.
+# Risk values are SAFETY-CRITICAL: they cannot be loosened while a Live session
+# is active. Invalid config blocks trading. Default mode is SHADOW.
+# =============================================================================
+
+default_mode: SHADOW
+timezone: America/New_York
+
+universe:
+  index_symbols: [SPX]
+  # NOTE: "ON" (ON Semiconductor) MUST be quoted — bare ON is YAML boolean true.
+  semiconductor_symbols:
+    [NVDA, AVGO, AMD, TSM, ASML, INTC, MU, ARM, MRVL, QCOM, TXN, AMAT, LRCX, KLAC, MCHP, "ON", NXPI, ADI]
+  sector_etfs: [SMH, SOXX]
+  market_confirmation: [SPY]
+  tech_confirmation: [QQQ]
+  volatility_proxy: VIX
+
+risk:
+  max_daily_loss_usd: 100.0
+  max_premium_per_contract_usd: 200.0
+  max_open_positions: 1
+  max_position_per_underlying: 1
+  max_total_premium_exposure_usd: 200.0
+  cooldown_after_trade_sec: 120
+  cooldown_after_loss_sec: 600
+  cooldown_same_underlying_sec: 300
+  caution_trades_per_hour: 3
+  block_setup_after_losses: 2
+  block_symbol_after_same_dir_losses: 2
+
+options:
+  max_spread_pct: 12.0
+  preferred_spread_pct: 8.0
+  min_option_bid: 0.05
+  min_option_volume: 50
+  min_open_interest: 100
+  delta_min: 0.30
+  delta_max: 0.70
+  gamma_warning: 0.10
+  theta_warning: -0.50
+  max_abnormal_quote_jump_pct: 30.0
+
+signal:
+  min_score_to_trade: 70.0
+  watch_band_floor: 70.0
+  reduced_risk_band_floor: 80.0
+  normal_band_floor: 90.0
+  min_relative_volume: 1.5
+  vwap_chop_cross_limit: 3
+  vwap_chop_window_min: 20
+  opening_range_minutes: 15
+
+# No-late-entry guards — scalps enter only on fresh momentum, never chase.
+entry:
+  max_scalp_distance_traveled_pct: 0.70
+  max_premium_preexpansion_pct: 25.0
+  max_candle_extension_mult: 2.0
+  max_distance_beyond_level_pct: 0.15
+  reject_if_chasing: true
+
+macro:
+  enabled: true
+  block_minutes_before: 10
+  block_minutes_after: 5
+  exit_before_event: true
+  exit_before_event_minutes: 10
+  high_impact_events:
+    [CPI, PPI, FOMC_RATE_DECISION, FOMC_PRESS_CONFERENCE, NONFARM_PAYROLLS,
+     UNEMPLOYMENT_RATE, AVG_HOURLY_EARNINGS, ISM_MANUFACTURING, ISM_SERVICES,
+     PMI, GDP, PCE, RETAIL_SALES, JOBLESS_CLAIMS, TREASURY_AUCTION,
+     FED_CHAIR_SPEECH, FED_SPEAKER]
+
+execution:
+  # Entry order handling (marketable limit only — never naked market orders).
+  order_timeout_sec: 3.0
+  reprice_attempts: 1
+  max_slippage_pct: 5.0
+  use_marketable_limit: true
+  allow_naked_market_orders: false
+  # Holding-time controls (1-5 min target; fast-failure 30-90s; hard cap 5 min).
+  hard_time_stop_sec: 300
+  no_movement_exit_sec: 75
+  fast_failure_min_sec: 30
+  fast_failure_max_sec: 90
+  # Premium-based profit targets / stops (% of entry premium).
+  first_profit_target_pct: 20.0
+  strong_profit_target_pct: 40.0
+  stop_loss_pct: 25.0
+  profit_giveback_pct: 10.0
+  # Hard scalp invariants — never hold to close, never turn a scalp into a swing.
+  exit_before_macro: true
+  forbid_hold_to_close: true
+  forbid_scalp_to_swing: true
+
+data_quality:
+  underlying_stale_sec: 3.0
+  option_stale_sec: 5.0
+  max_clock_drift_sec: 2.0
+  require_live_data: true
+  require_position_sync: true
+
+broker:
+  # Dockerized gnzsnz/ib-gateway: the host must connect via the socat RELAY
+  # ports (paper 4004, live 4003), because the raw API ports (4002/4001) are
+  # bound to the container's loopback only. Desktop TWS users (no Docker): set
+  # 7497 (paper)/7496 (live). Override per-machine via .env.
+  host: 127.0.0.1
+  paper_port: 4003
+  live_port: 4003
+  client_id: 1
+  market_data_type: 1
+
+market_data:
+  # 'simulated' runs the full pipeline offline (deterministic). Switch to 'tws'
+  # to ingest live candles/quotes/chains from TWS/IB Gateway.
+  source: simulated
+  scan_interval_sec: 5.0
+  candle_lookback_1m: 120
+  candle_lookback_5m: 78
+  relative_volume_lookback_days: 14
+  ema_fast: 9
+  ema_slow: 21
+  simulated_seed: 1337
