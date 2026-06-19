@@ -207,6 +207,14 @@ class MacroEvent(Base, PKMixin, TimestampMixin):
     block_minutes_before: Mapped[int] = mapped_column(Integer, default=10)
     block_minutes_after: Mapped[int] = mapped_column(Integer, default=5)
     source: Mapped[str] = mapped_column(String(32), default="manual")
+    # Enhanced fields for the macro calendar system.
+    event_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    consensus: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    prior: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    actual: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(16), nullable=True, default="scheduled")
+    country: Mapped[str | None] = mapped_column(String(8), nullable=True, default="US")
+    importance: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
 
 class SystemHealthEvent(Base, PKMixin):
@@ -249,3 +257,71 @@ class DailySummary(Base, PKMixin):
     lockouts: Mapped[int] = mapped_column(Integer, default=0)
     top_rejections: Mapped[dict] = mapped_column(JSON, default=dict)
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+# ---------------------------------------------------------------------------
+# LLM + macro calendar persistence tables
+# ---------------------------------------------------------------------------
+
+class MacroCalendarRequest(Base, PKMixin):
+    """Log of daily macro calendar fetches."""
+    __tablename__ = "macro_calendar_requests"
+
+    date: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD
+    provider: Mapped[str] = mapped_column(String(32), default="database")
+    event_count: Mapped[int] = mapped_column(Integer, default=0)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class MacroReleaseUpdateRecord(Base, PKMixin):
+    """Per-event release results with economic interpretations."""
+    __tablename__ = "macro_release_updates"
+
+    event_id: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(48))
+    release_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    actual: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    consensus: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    prior: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    revision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    surprise_direction: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    risk_asset_interpretation: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    rates_interpretation: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    volatility_interpretation: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    source: Mapped[str] = mapped_column(String(32), default="configured_provider")
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    status: Mapped[str] = mapped_column(String(16), default="released")
+    reaction_data: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class LLMGuidanceRequestRecord(Base, PKMixin):
+    """Full LLM guidance request metadata and chart snapshot."""
+    __tablename__ = "llm_guidance_requests"
+
+    request_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    chart_bars_count: Mapped[int] = mapped_column(Integer, default=0)
+    compression_method: Mapped[str] = mapped_column(String(16), default="full")
+    chart_valid: Mapped[bool] = mapped_column(Boolean, default=True)
+    macro_events_count: Mapped[int] = mapped_column(Integer, default=0)
+    trading_mode: Mapped[str] = mapped_column(String(8), default="SHADOW")
+    session_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    chart_issues: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class LLMGuidanceResponseRecord(Base, PKMixin):
+    """LLM guidance output."""
+    __tablename__ = "llm_guidance_responses"
+
+    request_id: Mapped[int | None] = mapped_column(
+        ForeignKey("llm_guidance_requests.id"), nullable=True, index=True
+    )
+    response_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    raw_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    validation_status: Mapped[str] = mapped_column(String(16), default="valid")
+    trade_permission: Mapped[str] = mapped_column(String(16), default="no_trade")
+    direction: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    risk_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+

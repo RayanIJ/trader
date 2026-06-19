@@ -129,3 +129,128 @@ def running_vwap_series(candles: list[Candle]) -> list[float | None]:
         den += c.volume
         out.append((num / den) if den > 0 else None)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Extended indicators for LLM chart context
+# ---------------------------------------------------------------------------
+
+def rsi(closes: list[float], period: int = 14) -> float | None:
+    """Wilder's RSI on the final value of *closes*."""
+    if len(closes) <= period:
+        return None
+    gains = 0.0
+    losses = 0.0
+    for i in range(1, period + 1):
+        delta = closes[i] - closes[i - 1]
+        if delta >= 0:
+            gains += delta
+        else:
+            losses -= delta
+    avg_gain = gains / period
+    avg_loss = losses / period
+    for i in range(period + 1, len(closes)):
+        delta = closes[i] - closes[i - 1]
+        if delta >= 0:
+            avg_gain = (avg_gain * (period - 1) + delta) / period
+            avg_loss = (avg_loss * (period - 1)) / period
+        else:
+            avg_gain = (avg_gain * (period - 1)) / period
+            avg_loss = (avg_loss * (period - 1) - delta) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100.0 - (100.0 / (1.0 + rs))
+
+
+def atr(candles: list[Candle], period: int = 14) -> float | None:
+    """Average True Range (Wilder smoothing) at the end of the series."""
+    if len(candles) < period + 1:
+        return None
+
+    def _tr(curr: Candle, prev: Candle) -> float:
+        return max(
+            curr.high - curr.low,
+            abs(curr.high - prev.close),
+            abs(curr.low - prev.close),
+        )
+
+    # Seed with simple average of first `period` true ranges.
+    total = sum(_tr(candles[i], candles[i - 1]) for i in range(1, period + 1))
+    atr_val = total / period
+    for i in range(period + 1, len(candles)):
+        atr_val = (atr_val * (period - 1) + _tr(candles[i], candles[i - 1])) / period
+    return atr_val
+
+
+def running_ema_series(closes: list[float], period: int) -> list[float | None]:
+    """Full EMA series (one value per close) for chart serialisation."""
+    out: list[float | None] = [None] * min(period - 1, len(closes))
+    if len(closes) < period or period < 1:
+        return [None] * len(closes)
+    k = 2.0 / (period + 1.0)
+    seed = sum(closes[:period]) / period
+    out.append(seed)
+    e = seed
+    for v in closes[period:]:
+        e = v * k + e * (1.0 - k)
+        out.append(e)
+    return out
+
+
+def running_rsi_series(closes: list[float], period: int = 14) -> list[float | None]:
+    """RSI at each bar from the start of the series (Wilder's method)."""
+    n = len(closes)
+    out: list[float | None] = [None] * n
+    if n <= period:
+        return out
+    gains = 0.0
+    losses = 0.0
+    for i in range(1, period + 1):
+        d = closes[i] - closes[i - 1]
+        if d >= 0:
+            gains += d
+        else:
+            losses -= d
+    avg_gain = gains / period
+    avg_loss = losses / period
+    if avg_loss == 0:
+        out[period] = 100.0
+    else:
+        out[period] = 100.0 - (100.0 / (1.0 + avg_gain / avg_loss))
+    for i in range(period + 1, n):
+        d = closes[i] - closes[i - 1]
+        if d >= 0:
+            avg_gain = (avg_gain * (period - 1) + d) / period
+            avg_loss = (avg_loss * (period - 1)) / period
+        else:
+            avg_gain = (avg_gain * (period - 1)) / period
+            avg_loss = (avg_loss * (period - 1) - d) / period
+        if avg_loss == 0:
+            out[i] = 100.0
+        else:
+            out[i] = 100.0 - (100.0 / (1.0 + avg_gain / avg_loss))
+    return out
+
+
+def running_atr_series(candles: list[Candle], period: int = 14) -> list[float | None]:
+    """ATR at each bar from the start of the series (Wilder smoothing)."""
+    n = len(candles)
+    out: list[float | None] = [None] * n
+    if n < period + 1:
+        return out
+
+    def _tr(curr: Candle, prev: Candle) -> float:
+        return max(
+            curr.high - curr.low,
+            abs(curr.high - prev.close),
+            abs(curr.low - prev.close),
+        )
+
+    total = sum(_tr(candles[i], candles[i - 1]) for i in range(1, period + 1))
+    atr_val = total / period
+    out[period] = atr_val
+    for i in range(period + 1, n):
+        atr_val = (atr_val * (period - 1) + _tr(candles[i], candles[i - 1])) / period
+        out[i] = atr_val
+    return out

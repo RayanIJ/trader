@@ -1,10 +1,12 @@
-// Thin REST client for the local backend. Base URL is localhost by default.
-
 import type {
+  ChartContextStatus,
   DailySummary,
   ExecutionSnapshot,
   HealthResponse,
   JournalEntry,
+  LLMGuidanceSnapshot,
+  MacroCalendarDay,
+  MacroReleaseUpdate,
   ModeState,
   RiskStatusResponse,
   ScanResult,
@@ -72,4 +74,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ seed, steps }),
     }),
+  // --- LLM Guidance ---
+  llmGuidance: () => req<LLMGuidanceSnapshot>("/api/llm/guidance"),
+  chartContextStatus: () => req<ChartContextStatus>("/api/llm/chart-context"),
+  forceLLMGuidance: () => req("/api/llm/guidance/force", { method: "POST" }),
+  // --- Macro Calendar ---
+  macroCalendar: () => req<MacroCalendarDay>("/api/macro/calendar"),
+  macroReleases: () => req<{ updates: MacroReleaseUpdate[] }>("/api/macro/releases"),
+  macroNextEvent: () => req("/api/macro/next-event"),
+  macroRefreshCalendar: () => req("/api/macro/calendar/refresh", { method: "POST" }),
 };

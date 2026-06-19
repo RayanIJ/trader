@@ -125,6 +125,19 @@ class MacroConfig(BaseModel):
             "FED_CHAIR_SPEECH", "FED_SPEAKER",
         ]
     )
+    # Enhanced macro calendar settings.
+    calendar_provider: str = Field(default="database", pattern="^(database|static|investing)$")
+    standard_block_before_min: int = Field(default=3, ge=0)
+    standard_block_after_min: int = Field(default=3, ge=0)
+    major_block_before_min: int = Field(default=5, ge=0)
+    major_block_after_min: int = Field(default=5, ge=0)
+    major_events: List[str] = Field(
+        default_factory=lambda: [
+            "FOMC_RATE_DECISION", "FOMC_PRESS_CONFERENCE", "CPI",
+            "NONFARM_PAYROLLS", "FED_CHAIR_SPEECH",
+        ]
+    )
+    release_update_delays: List[int] = Field(default_factory=lambda: [1, 3, 5])
 
 
 class EntryTimingConfig(BaseModel):
@@ -237,6 +250,22 @@ class MarketDataConfig(BaseModel):
     simulated_seed: int = Field(default=1337)
 
 
+class LLMConfig(BaseModel):
+    """LLM guidance subsystem configuration."""
+    enabled: bool = False
+    guidance_interval_sec: int = Field(default=300, gt=0)
+    max_full_bars: int = Field(default=30, ge=10)  # 30 full bars + compressed older = ~4K tokens. 90 bars exceeded practical inference time.
+    compression_threshold: int = Field(default=150, ge=10)  # Trigger tiered mode above this bar count.
+    chart_stale_sec: float = Field(default=90.0, gt=0)
+    provider: str = Field(default="stub", pattern="^(stub|ollama|openai|mlx)$")
+    model: str = "qwen3:8b"
+    max_tokens: int = Field(default=2000, gt=0)
+    temperature: float = Field(default=0.1, ge=0, le=2)
+    user_timezone: str = "Asia/Riyadh"
+    market_timezone: str = "America/New_York"
+    ollama_base_url: str = "http://localhost:11434"
+
+
 class AppConfig(BaseModel):
     """Root configuration object."""
 
@@ -252,6 +281,7 @@ class AppConfig(BaseModel):
     data_quality: DataQualityConfig = Field(default_factory=DataQualityConfig)
     broker: BrokerConfig = Field(default_factory=BrokerConfig)
     market_data: MarketDataConfig = Field(default_factory=MarketDataConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
 
     @field_validator("default_mode")
     @classmethod

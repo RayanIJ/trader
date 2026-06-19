@@ -53,6 +53,7 @@ def add_event(
     if event_time.tzinfo is None:
         event_time = event_time.replace(tzinfo=timezone.utc)
     with get_session() as s:
+        event_id = f"{name}_{event_time.strftime('%Y%m%d_%H%M')}"
         row = MacroEvent(
             name=name,
             event_time=event_time,
@@ -60,6 +61,7 @@ def add_event(
             block_minutes_before=block_minutes_before if block_minutes_before is not None else 10,
             block_minutes_after=block_minutes_after if block_minutes_after is not None else 5,
             source=source,
+            event_id=event_id,
         )
         s.add(row)
         s.commit()

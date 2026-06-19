@@ -137,6 +137,16 @@ class RejectCode(str, Enum):
     BLOCKED_STOP_EXCEEDS_RISK = "BLOCKED_STOP_EXCEEDS_RISK"
     BLOCKED_SYSTEM_HEALTH = "BLOCKED_SYSTEM_HEALTH"
     BLOCKED_DIRECTION_FLIP = "BLOCKED_DIRECTION_FLIP"
+    # Chart-context vetoes.
+    BLOCKED_CHART_CONTEXT_STALE = "BLOCKED_CHART_CONTEXT_STALE"
+    BLOCKED_CHART_CONTEXT_INCOMPLETE = "BLOCKED_CHART_CONTEXT_INCOMPLETE"
+    BLOCKED_CHART_CONTEXT_TIME_MISMATCH = "BLOCKED_CHART_CONTEXT_TIME_MISMATCH"
+    # Macro-release vetoes.
+    BLOCKED_MACRO_PRE_RELEASE = "BLOCKED_MACRO_PRE_RELEASE"
+    BLOCKED_MACRO_POST_RELEASE = "BLOCKED_MACRO_POST_RELEASE"
+    BLOCKED_MACRO_RESULT_PENDING = "BLOCKED_MACRO_RESULT_PENDING"
+    BLOCKED_MACRO_VOLATILITY_EXPANSION = "BLOCKED_MACRO_VOLATILITY_EXPANSION"
+    BLOCKED_MACRO_TIMEZONE_VALIDATION_FAILED = "BLOCKED_MACRO_TIMEZONE_VALIDATION_FAILED"
 
 
 class HealthComponent(str, Enum):
@@ -149,3 +159,82 @@ class HealthComponent(str, Enum):
     CLOCK = "CLOCK"
     MACRO_CALENDAR = "MACRO_CALENDAR"
     BACKEND = "BACKEND"
+
+
+class MacroEventStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    RELEASE_WINDOW = "release_window"
+    RELEASED = "released"
+    DELAYED = "delayed"
+    CANCELLED = "cancelled"
+    UNAVAILABLE = "unavailable"
+
+
+class MacroImportance(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class ChartCompressionMethod(str, Enum):
+    FULL = "full"
+    TIERED_90M = "tiered_90m"
+    PIVOTS_ONLY = "pivots_only"
+
+
+class MarketStateHint(str, Enum):
+    TREND_UP = "trend_up"
+    TREND_DOWN = "trend_down"
+    CHOP = "chop"
+    RANGE = "range"
+    REVERSAL_ATTEMPT = "reversal_attempt"
+    BREAKDOWN_ATTEMPT = "breakdown_attempt"
+    BREAKOUT_ATTEMPT = "breakout_attempt"
+
+
+class RangePosition(str, Enum):
+    NEAR_HIGH = "near_high"
+    UPPER_RANGE = "upper_range"
+    MID_RANGE = "mid_range"
+    LOWER_RANGE = "lower_range"
+    NEAR_LOW = "near_low"
+
+
+class SurpriseDirection(str, Enum):
+    HOTTER = "hotter"
+    COOLER = "cooler"
+    STRONGER = "stronger"
+    WEAKER = "weaker"
+    INLINE = "inline"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
+class RiskAssetInterpretation(str, Enum):
+    BULLISH = "bullish"
+    BEARISH = "bearish"
+    MIXED = "mixed"
+    NEUTRAL = "neutral"
+    UNKNOWN = "unknown"
+
+
+class RatesInterpretation(str, Enum):
+    YIELDS_UP = "yields_up"
+    YIELDS_DOWN = "yields_down"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
+class VolatilityInterpretation(str, Enum):
+    VOL_EXPANSION = "vol_expansion"
+    VOL_CRUSH = "vol_crush"
+    NEUTRAL = "neutral"
+    UNKNOWN = "unknown"
+
+
+class TradePermission(str, Enum):
+    """LLM guidance output — what the model recommends."""
+    ALLOWED = "allowed"
+    NO_TRADE = "no_trade"
+    EXIT_ONLY = "exit_only"
+    BLOCKED = "blocked"

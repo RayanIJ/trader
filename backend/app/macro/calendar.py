@@ -35,6 +35,7 @@ class MacroStatus:
     next_event_time: str | None
     minutes_to_next: float | None
     should_exit_open: bool        # flatten open positions before the upcoming event
+    block_type: str | None = None  # "pre_release" | "post_release" | None
 
     def to_dict(self) -> dict:
         return {
@@ -45,6 +46,7 @@ class MacroStatus:
             "next_event_time": self.next_event_time,
             "minutes_to_next": self.minutes_to_next,
             "should_exit_open": self.should_exit_open,
+            "block_type": self.block_type,
         }
 
 
@@ -65,16 +67,24 @@ class MacroGuard:
         after = e.block_minutes_after if e.block_minutes_after is not None else self._cfg.block_minutes_after
         return e.event_time - timedelta(minutes=before), e.event_time + timedelta(minutes=after)
 
+    def _block_type(self, e: MacroEventDTO, now: datetime) -> str | None:
+        """Classify whether we're in the pre- or post-release window."""
+        if now < e.event_time:
+            return "pre_release"
+        return "post_release"
+
     def status(self, now: datetime | None = None) -> MacroStatus:
         now = now or datetime.now(timezone.utc)
         if not self._cfg.enabled or not self._events:
             return MacroStatus(False, None, None, None, None, None, False)
 
         active: MacroEventDTO | None = None
+        block_type: str | None = None
         for e in self._events:
             start, end = self._window(e)
             if start <= now <= end:
                 active = e
+                block_type = self._block_type(e, now)
                 break
 
         upcoming = [e for e in self._events if e.event_time >= now]
@@ -93,10 +103,17 @@ class MacroGuard:
             next_event_time=nxt.event_time.isoformat() if nxt else None,
             minutes_to_next=round(minutes_to_next, 1) if minutes_to_next is not None else None,
             should_exit_open=should_exit,
+            block_type=block_type,
         )
 
     def is_blocked(self, now: datetime | None = None) -> bool:
         return self.status(now).blocked
 
-    def reject_code(self) -> RejectCode:
+    def reject_code(self, now: datetime | None = None) -> RejectCode:
+        """Return the specific reject code based on block type."""
+        st = self.status(now)
+        if st.block_type == "pre_release":
+            return RejectCode.BLOCKED_MACRO_PRE_RELEASE
+        if st.block_type == "post_release":
+            return RejectCode.BLOCKED_MACRO_POST_RELEASE
         return RejectCode.BLOCKED_MACRO_EVENT

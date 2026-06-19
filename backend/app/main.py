@@ -20,6 +20,8 @@ from app.api.routes import execution as execution_routes
 from app.api.routes import journal as journal_routes
 from app.api.routes import health as health_routes
 from app.api.routes import ibkr as ibkr_routes
+from app.api.routes import llm as llm_routes
+from app.api.routes import macro_calendar as macro_calendar_routes
 from app.api.routes import market as market_routes
 from app.api.routes import mode as mode_routes
 from app.api.routes import risk as risk_routes
@@ -82,6 +84,8 @@ app.include_router(risk_routes.router)
 app.include_router(execution_routes.router)
 app.include_router(journal_routes.router)
 app.include_router(backtest_routes.router)
+app.include_router(llm_routes.router)
+app.include_router(macro_calendar_routes.router)
 
 
 @app.websocket("/ws")

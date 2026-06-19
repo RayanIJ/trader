@@ -69,8 +69,9 @@ class RiskEngine:
             codes.extend(signal.reject_codes)
 
         if macro.is_blocked(now):
-            if RejectCode.BLOCKED_MACRO_EVENT not in codes:
-                codes.append(macro.reject_code())
+            rc = macro.reject_code(now)
+            if rc not in codes:
+                codes.append(rc)
 
         if not health_ok:
             codes.append(RejectCode.BLOCKED_SYSTEM_HEALTH)

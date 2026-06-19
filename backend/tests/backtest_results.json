@@ -1,0 +1,115 @@
+{
+  "backtest_time_et": "2026-06-19T10:32:25.275897-04:00",
+  "backtest_time_gmt3": "2026-06-19T17:32:25.276014+03:00",
+  "steps": [
+    {
+      "step": "scrape_calendar",
+      "date": "2026-06-19",
+      "status": "sample_data",
+      "source": "realistic_sample",
+      "event_count": 7,
+      "events": [
+        {
+          "name": "Core CPI (MoM)",
+          "time": "08:30",
+          "importance": 3,
+          "actual": "0.3%",
+          "forecast": "0.2%",
+          "previous": "0.4%"
+        },
+        {
+          "name": "CPI (YoY)",
+          "time": "08:30",
+          "importance": 3,
+          "actual": "3.3%",
+          "forecast": "3.4%",
+          "previous": "3.5%"
+        },
+        {
+          "name": "Initial Jobless Claims",
+          "time": "08:30",
+          "importance": 2,
+          "actual": "242K",
+          "forecast": "235K",
+          "previous": "229K"
+        },
+        {
+          "name": "Continuing Jobless Claims",
+          "time": "08:30",
+          "importance": 2,
+          "actual": "1.820M",
+          "forecast": "1.800M",
+          "previous": "1.790M"
+        },
+        {
+          "name": "S&P Global Manufacturing PMI",
+          "time": "09:45",
+          "importance": 2,
+          "actual": null,
+          "forecast": "51.2",
+          "previous": "51.3"
+        },
+        {
+          "name": "FOMC Statement",
+          "time": "14:00",
+          "importance": 3,
+          "actual": null,
+          "forecast": null,
+          "previous": null
+        },
+        {
+          "name": "Fed Interest Rate Decision",
+          "time": "14:00",
+          "importance": 3,
+          "actual": null,
+          "forecast": "5.50%",
+          "previous": "5.50%"
+        }
+      ]
+    },
+    {
+      "step": "chart_context",
+      "bar_count": 64,
+      "compression": "tiered_90m",
+      "current_price": 5420.34,
+      "vwap": 5422.1634,
+      "rsi_14": 49.94,
+      "ema_10": 5420.138,
+      "ema_20": 5420.2063
+    },
+    {
+      "step": "macro_context",
+      "event_count": 7,
+      "active_blocks": 0,
+      "high_impact_events": [
+        "Core CPI",
+        "CPI",
+        "FOMC Statement",
+        "Fed Interest Rate Decision"
+      ]
+    },
+    {
+      "step": "llm_guidance",
+      "status": "success",
+      "elapsed_seconds": 108.7,
+      "total_tokens_estimate": 7275,
+      "context_utilization_pct": 22.2,
+      "guidance": {
+        "trade_permission": "no_trade",
+        "direction": null,
+        "market_state": "range with high impact macro releases",
+        "trigger_level": null,
+        "invalidation_level": null,
+        "target_1": null,
+        "target_2": null,
+        "stop_level": null,
+        "risk_mode": "blocked",
+        "reasoning": "High impact macro releases scheduled at 08:30 ET, including Core CPI, CPI, Initial Jobless Claims, and Continuing Jobless Claims. FOMC Statement and Interest Rate Decision at 14:00 ET. No clear trading setup available.",
+        "confidence": 0.7
+      }
+    }
+  ],
+  "errors": [],
+  "completed_at_et": "2026-06-19T10:34:13.974062-04:00",
+  "completed_at_gmt3": "2026-06-19T17:34:13.974117+03:00"
+}

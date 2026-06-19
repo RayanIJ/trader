@@ -22,7 +22,10 @@ from app.execution.position_manager import PositionManager
 from app.health.monitor import HealthMonitor
 from app.journal.service import JournalService
 from app.journal.summary import build_daily_summary, get_daily_summary
+from app.llm.engine import LLMGuidanceEngine
 from app.macro.calendar import MacroGuard
+from app.macro.calendar_provider import make_calendar_provider
+from app.macro.release_monitor import ReleaseMonitor
 from app.macro.store import refresh_guard
 from app.market_data.factory import make_market_data_source
 from app.modes.manager import ModeManager
@@ -76,7 +79,18 @@ class Runtime:
         self._poll_task: asyncio.Task | None = None
         self._scan_task: asyncio.Task | None = None
         self._exec_task: asyncio.Task | None = None
+        self._llm_task: asyncio.Task | None = None
+        self._release_task: asyncio.Task | None = None
         self._poll_interval = 5.0
+
+        # LLM guidance subsystem.
+        llm_provider = cfg.llm.provider if cfg.llm.enabled else "stub"
+        self.llm_engine = LLMGuidanceEngine(self, provider=llm_provider)
+        self.calendar_provider = make_calendar_provider(cfg.macro.calendar_provider)
+        self.release_monitor = ReleaseMonitor(update_delays=cfg.macro.release_update_delays)
+        self._latest_release_event: dict | None = None
+        self._latest_release_reaction: dict | None = None
+
         # Session supervisor: once the user connects, we keep the broker session
         # alive — if it drops (socket close, farm break, competing login), we
         # re-initiate a new session automatically with simple backoff.
@@ -101,18 +115,20 @@ class Runtime:
         self._poll_task = asyncio.create_task(self._poll_loop())
         self._scan_task = asyncio.create_task(self._scan_loop())
         self._exec_task = asyncio.create_task(self._execution_loop())
+        self._llm_task = asyncio.create_task(self._llm_guidance_loop())
+        self._release_task = asyncio.create_task(self._release_monitor_loop())
+        # Fetch today's macro calendar once at startup.
+        asyncio.create_task(self._fetch_daily_calendar())
         logger.info(
-            "runtime started (mode=%s, market_data=%s)",
+            "runtime started (mode=%s, market_data=%s, llm=%s)",
             self.mode_manager.mode.value, self.market_data.name,
+            "enabled" if cfg.llm.enabled else "stub",
         )
 
     async def shutdown(self) -> None:
-        if self._poll_task:
-            self._poll_task.cancel()
-        if self._scan_task:
-            self._scan_task.cancel()
-        if self._exec_task:
-            self._exec_task.cancel()
+        for task in (self._poll_task, self._scan_task, self._exec_task, self._llm_task, self._release_task):
+            if task:
+                task.cancel()
         await self.mode_manager.broker.disconnect()
         try:
             await self.market_data.close()
@@ -294,6 +310,64 @@ class Runtime:
             except Exception:
                 logger.exception("scan failed")
             await asyncio.sleep(self.config.market_data.scan_interval_sec)
+
+    async def _llm_guidance_loop(self) -> None:
+        """Periodic LLM guidance — default every 5 minutes."""
+        await asyncio.sleep(3.0)  # Let other subsystems warm up first.
+        interval = self.config.llm.guidance_interval_sec
+        while True:
+            try:
+                await self.llm_engine.tick()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("LLM guidance tick failed")
+            await asyncio.sleep(interval)
+
+    async def _release_monitor_loop(self) -> None:
+        """Check for macro releases that need updates every 60 seconds."""
+        await asyncio.sleep(5.0)
+        while True:
+            try:
+                self.release_monitor.check_release_windows()
+                needing = self.release_monitor.get_events_needing_update()
+                for event, delay in needing:
+                    logger.info(
+                        "release update needed: %s delay=%dmin", event.event_id, delay,
+                    )
+                    # In the future, this would fetch from a real provider.
+                    # For now, record the attempt without actual data.
+                    self.release_monitor.record_update(event, delay)
+
+                # Publish latest release to event bus for dashboard.
+                latest = self.release_monitor.get_latest_released()
+                if latest:
+                    self._latest_release_event = latest.model_dump()
+                    await bus.publish(Topic.MACRO_CALENDAR, {
+                        "latest_release": latest.model_dump(),
+                    })
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("release monitor tick failed")
+            await asyncio.sleep(60.0)
+
+    async def _fetch_daily_calendar(self) -> None:
+        """Fetch today's macro calendar once at startup."""
+        try:
+            cal = await self.calendar_provider.fetch_daily()
+            self.release_monitor.set_calendar(cal)
+            await self.journal.record_async("MACRO_CALENDAR_FETCHED", {
+                "date_et": cal.date_et,
+                "event_count": len(cal.events),
+                "provider": cal.provider,
+            })
+            logger.info(
+                "daily macro calendar fetched: %d events (provider=%s)",
+                len(cal.events), cal.provider,
+            )
+        except Exception:
+            logger.exception("failed to fetch daily macro calendar")
 
 
 # Module-level holder set during app lifespan.

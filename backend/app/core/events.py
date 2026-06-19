@@ -48,6 +48,9 @@ class Topic:
     POSITION = "position"
     EXECUTION = "execution"
     JOURNAL = "journal"
+    LLM_GUIDANCE = "llm_guidance"
+    MACRO_CALENDAR = "macro_calendar"
+    CHART_CONTEXT = "chart_context"
 
 
 # Single shared bus for the process.

@@ -102,7 +102,12 @@ def test_risk_rejects_macro_block():
         option_ask=1.5, multiplier=100.0, now=t,
     )
     assert not dec.approved
-    assert RejectCode.BLOCKED_MACRO_EVENT in dec.reject_codes
+    macro_reject_codes = {
+        RejectCode.BLOCKED_MACRO_EVENT,
+        RejectCode.BLOCKED_MACRO_PRE_RELEASE,
+        RejectCode.BLOCKED_MACRO_POST_RELEASE,
+    }
+    assert any(rc in macro_reject_codes for rc in dec.reject_codes)
 
 
 def test_cooldown_blocks_rapid_reentry():

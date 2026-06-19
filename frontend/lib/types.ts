@@ -210,3 +210,90 @@ export interface BacktestResult {
   top_symbols: { symbol: string; max_score: number }[];
   rejection_reasons: Record<string, number>;
 }
+
+// --- LLM Guidance + Macro Calendar ---
+
+export interface DualTimestamp {
+  et: string;
+  gmt3: string;
+}
+
+export interface MacroCalendarEvent {
+  event_id: string;
+  name: string;
+  country: string;
+  importance: "low" | "medium" | "high";
+  release_time_et: string | null;
+  release_time_gmt3: string | null;
+  source: string;
+  consensus: string | number | null;
+  prior: string | number | null;
+  actual: string | number | null;
+  status: "scheduled" | "release_window" | "released" | "delayed" | "cancelled" | "unavailable";
+  trading_block_before_minutes: number;
+  trading_block_after_minutes: number;
+  requires_release_update: boolean;
+}
+
+export interface MacroReleaseUpdate {
+  event_id: string;
+  name: string;
+  release_time_et: string | null;
+  release_time_gmt3: string | null;
+  actual: string | number | null;
+  consensus: string | number | null;
+  prior: string | number | null;
+  revision: string | number | null;
+  surprise_direction: string;
+  risk_asset_interpretation: string;
+  rates_interpretation: string;
+  volatility_interpretation: string;
+  source: string;
+  fetched_at_et: string | null;
+  fetched_at_gmt3: string | null;
+  status: string;
+  spx_1m_change_pct: number | null;
+  spx_3m_change_pct: number | null;
+  spx_5m_change_pct: number | null;
+  price_action: string | null;
+}
+
+export interface MacroCalendarDay {
+  date_et: string | null;
+  date_gmt3: string | null;
+  events: MacroCalendarEvent[];
+}
+
+export interface ChartContextStatus {
+  enabled: boolean;
+  bar_count: number;
+  compression_method: string | null;
+  chart_valid: boolean | null;
+  chart_issues: string[];
+  status?: string;
+  session_summary?: Record<string, unknown>;
+}
+
+export interface LLMGuidanceResponse {
+  trade_permission: "allowed" | "no_trade" | "exit_only" | "blocked";
+  direction: "CALL" | "PUT" | null;
+  market_state: string | null;
+  trigger_level: number | null;
+  invalidation_level: number | null;
+  target_1: number | null;
+  target_2: number | null;
+  stop_level: number | null;
+  risk_mode: string | null;
+  reasoning: string | null;
+  confidence: number | null;
+}
+
+export interface LLMGuidanceSnapshot {
+  guidance: LLMGuidanceResponse | null;
+  request_metadata: Record<string, unknown> | null;
+  bar_count: number;
+  compression_method: string | null;
+  chart_valid: boolean | null;
+  enabled: boolean;
+}
+
